@@ -3,6 +3,8 @@ package com.shortlink.admin.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shortlink.admin.dao.entity.UserDO;
 import com.shortlink.admin.dto.req.UserLoginReqDTO;
+import com.shortlink.admin.dto.req.UserRegisterReqDTO;
+import com.shortlink.admin.dto.req.UserUpdateReqDTO;
 import com.shortlink.admin.dto.resp.UserLoginRespDTO;
 import com.shortlink.admin.dto.resp.UserRespDTO;
 
@@ -20,7 +22,7 @@ public interface UserService extends IService<UserDO> {
     *@return: void
     *
     */
-    void register(UserLoginReqDTO requestParam);
+    void register(UserRegisterReqDTO requestParam);
     /** 
     *@Description: 布隆过滤器中查询用户是否存在
     *@Param: [username]
@@ -47,5 +49,32 @@ public interface UserService extends IService<UserDO> {
     *
     */
     UserRespDTO getUserByUsername(String username);
+    /**
+    *@Description: 用户登出
+    *@Param: [username, token]
+    *@Author: yun
+    *@Date: 2023/12/21
+    *@return: void
+    *
+    */
+    void logout(String username, String token);
+    /**
+    *@Description: 检查是否登录
+    *@Param: [username, token]
+    *@Author: yun
+    *@Date: 2023/12/21
+    *@return: java.lang.Boolean
+    *
+    */
+    Boolean checkLogin(String username, String token);
+    /**
+    *@Description: 更新用户数据
+    *@Param: [requestParam]
+    *@Author: yun
+    *@Date: 2023/12/21
+    *@return: void
+    *
+    */
+    void  update(UserUpdateReqDTO requestParam);
 
 }

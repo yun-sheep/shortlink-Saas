@@ -12,6 +12,8 @@ import com.shortlink.admin.common.enums.UserErrorCodeEnum;
 import com.shortlink.admin.dao.entity.UserDO;
 import com.shortlink.admin.dao.mapper.UserMapper;
 import com.shortlink.admin.dto.req.UserLoginReqDTO;
+import com.shortlink.admin.dto.req.UserRegisterReqDTO;
+import com.shortlink.admin.dto.req.UserUpdateReqDTO;
 import com.shortlink.admin.dto.resp.UserLoginRespDTO;
 import com.shortlink.admin.dto.resp.UserRespDTO;
 import com.shortlink.admin.service.UserService;
@@ -45,7 +47,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     //redis操作类
     private final StringRedisTemplate stringRedisTemplate;
     @Override
-    public void register(UserLoginReqDTO requestParam) {
+    public void register(UserRegisterReqDTO requestParam) {
         //1、判断用户是否存在（先用一层布隆过滤器）
         if(!hasUsername(requestParam.getUsername())){
             throw new ClientException(USER_NAME_EXIST);
@@ -99,7 +101,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
                     .map(Object::toString)
                     .orElseThrow(() -> new ClientException("用户登录错误"));
             return new UserLoginRespDTO(token);
-
         }
         /**
          * Hash
@@ -127,6 +128,30 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
        UserRespDTO userRespDTO = new UserRespDTO();
        BeanUtils.copyProperties(userDO,userRespDTO);
        return userRespDTO;
-
     }
+
+    @Override
+    public void logout(String username, String token) {
+        //判断是否已经登录
+        if (checkLogin(username,token)){
+            stringRedisTemplate.delete("login_"+username);
+            return;
+        }
+        throw  new ClientException("用户Token不存在或者用户未登录");
+    }
+
+    @Override
+    public Boolean checkLogin(String username, String token) {
+        return stringRedisTemplate.opsForHash().get("login_" + username, token)!=null;
+    }
+
+    @Override
+    public void update(UserUpdateReqDTO requestParam) {
+        //TODO 检查是否是当前用户
+        //直接更新到mysql中
+        LambdaQueryWrapper<UserDO> userDOLambdaQueryWrapper = new LambdaQueryWrapper<>(UserDO.class)
+                .eq(UserDO::getUsername,requestParam);
+        baseMapper.update(BeanUtil.toBean(requestParam, UserDO.class),userDOLambdaQueryWrapper);
+    }
+
 }

@@ -1,23 +1,23 @@
-package com.shortlink.admin.dto.req;
+package com.shortlink.admin.dto.resp;
 
 import lombok.Data;
 
 /**
- * @Description 用户注册参数
+ * @Description 返回用户的无脱敏信息
  * @auther j2-yizhiyang
- * @date 2023/12/19 16:52
+ * @date 2023/12/21 13:59
  */
 @Data
-public class UserRegisterReqDTO {
+public class UserActualRespDTO {
+    /**
+     * id
+     */
+    private Long id;
+
     /**
      * 用户名
      */
     private String username;
-
-    /**
-     * 密码
-     */
-    private String password;
 
     /**
      * 真实姓名
