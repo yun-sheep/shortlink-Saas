@@ -16,6 +16,7 @@ import com.shortlink.admin.dto.req.UserRegisterReqDTO;
 import com.shortlink.admin.dto.req.UserUpdateReqDTO;
 import com.shortlink.admin.dto.resp.UserLoginRespDTO;
 import com.shortlink.admin.dto.resp.UserRespDTO;
+import com.shortlink.admin.service.GroupService;
 import com.shortlink.admin.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.redisson.api.RBloomFilter;
@@ -46,6 +47,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
     private final RedissonClient redissonClient;
     //redis操作类
     private final StringRedisTemplate stringRedisTemplate;
+    private final GroupService groupService;
     @Override
     public void register(UserRegisterReqDTO requestParam) {
         //1、判断用户是否存在（先用一层布隆过滤器）
@@ -68,7 +70,9 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, UserDO> implements 
                 }
                 //把新注册的用户添加到布隆过滤器
                 userRegisterCachePenetrationBloomFilter.add(requestParam.getUsername());
-                //TODO 相关的分组操作
+                //一旦注册就有一个默认分组
+                groupService.saveGroup(requestParam.getUsername(), "默认分组");
+                return;
             }
         }finally {
             lock.unlock();
