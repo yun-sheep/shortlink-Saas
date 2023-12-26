@@ -8,12 +8,18 @@ import com.shorlink.project.common.convention.exception.ClientException;
 import com.shorlink.project.common.convention.exception.ServiceException;
 import com.shorlink.project.common.enums.VailDateTypeEnum;
 import com.shorlink.project.dao.entity.ShortLinkDO;
+import com.shorlink.project.dao.entity.ShortLinkGotoDO;
+import com.shorlink.project.dao.mapper.ShortLinkGotoMapper;
 import com.shorlink.project.dao.mapper.ShortLinkMapper;
 import com.shorlink.project.dto.rep.ShortLinkCreateReqDTO;
 import com.shorlink.project.dto.rep.ShortLinkUpdateReqDTO;
 import com.shorlink.project.dto.resp.ShortLinkCreateRespDTO;
 import com.shorlink.project.service.ShortLinkService;
 import com.shorlink.project.toolkit.HashUtil;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RBloomFilter;
@@ -22,6 +28,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.util.Objects;
 
 /**
@@ -34,11 +41,12 @@ import java.util.Objects;
 @RequiredArgsConstructor
 public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLinkDO> implements ShortLinkService {
     private final RBloomFilter<String> shortUriCreateCachePenetrationBloomFilter;
+    private final ShortLinkGotoMapper shortLinkGotoMapper;
     @Value("${short-link.domain.default}")
     private String createShortLinkDefaultDomain;
     @Override
     public ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam) {
-        //1、生成短链接后缀
+        //1、生成短链接后缀（短链接的格式：https://sourl.cn/miPMRu)
         String shortLinkSuffix = generateSuffix(requestParam);
         //2、生成完整短链接
         String fullShortUrl = new StringBuilder()
@@ -145,6 +153,24 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .build();
             baseMapper.insert(shortLinkDO);
         }
+    }
+
+    @Override
+    public void restoreUrl(String shortUri, ServletRequest request, ServletResponse response) throws IOException {
+        //获取主机名
+        String serverName = request.getServerName();
+        //怎么通过短链接来找原始链接
+        String fullShortUrl = serverName + "/" + shortUri;
+        LambdaQueryWrapper<ShortLinkGotoDO> linkGotoDOLambdaQueryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
+                .eq(ShortLinkGotoDO::getFullShortUrl,fullShortUrl);
+        ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(linkGotoDOLambdaQueryWrapper);
+        //直接重定向走
+        if(shortLinkGotoDO!=null){
+            ((HttpServletResponse)response).sendRedirect(shortLinkGotoDO.getFullShortUrl());
+        }
+
+
+
     }
 
     private String generateSuffix(ShortLinkCreateReqDTO requestParam){

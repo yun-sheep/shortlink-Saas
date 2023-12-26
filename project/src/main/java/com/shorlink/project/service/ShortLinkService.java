@@ -5,6 +5,10 @@ import com.shorlink.project.dao.entity.ShortLinkDO;
 import com.shorlink.project.dto.rep.ShortLinkCreateReqDTO;
 import com.shorlink.project.dto.rep.ShortLinkUpdateReqDTO;
 import com.shorlink.project.dto.resp.ShortLinkCreateRespDTO;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
+
+import java.io.IOException;
 
 /**
  * @Description 短链接接口层
@@ -31,4 +35,13 @@ public interface ShortLinkService extends IService<ShortLinkDO> {
     *
     */
     void updateShortLink(ShortLinkUpdateReqDTO requestParam);
+    /** 
+    *@Description: 短链接跳转原始链接
+    *@Param: [shortUri, request, response]
+    *@Author: yun
+    *@Date: 2023/12/26
+    *@return: void
+    *
+    */
+    void restoreUrl(String shortUri, ServletRequest request, ServletResponse response) throws IOException;
 }
