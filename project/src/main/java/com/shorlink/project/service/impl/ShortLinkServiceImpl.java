@@ -23,7 +23,11 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.redisson.api.RBloomFilter;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
@@ -34,6 +38,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Date;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -79,6 +85,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 .totalUip(0)
                 .delTime(0L)
                 .fullShortUrl(fullShortUrl)
+                .favicon(getFavicon(requestParam.getOriginUrl()))
                 .build();
         //goto插入
         ShortLinkGotoDO linkGotoDO = ShortLinkGotoDO.builder()
@@ -173,6 +180,7 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                     .totalUip(hasShortLinkDO.getTotalUip())
                     .fullShortUrl(hasShortLinkDO.getFullShortUrl())
                     .delTime(0L)
+                    .favicon(getFavicon(requestParam.getOriginUrl()))
                     .build();
             baseMapper.insert(shortLinkDO);
         }
@@ -251,7 +259,14 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
             lock.unlock();
         }
     }
-
+    /**
+    *@Description: 生成短链接结尾
+    *@Param: [requestParam]
+    *@Author: yun
+    *@Date: 2023/12/26
+    *@return: java.lang.String
+    *
+    */
     private String generateSuffix(ShortLinkCreateReqDTO requestParam){
         int customGenerateCount = 0;
         String shorUri;
@@ -271,4 +286,30 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         }
         return shorUri;
     }
+    /**
+    *@Description: 根据url获取标题和图标
+    *@Param: [url]
+    *@Author: yun
+    *@Date: 2023/12/26
+    *@return: java.lang.String
+    *
+    */
+    @SneakyThrows
+    private String getFavicon(String url) {
+        URL targetUrl = new URL(url);
+        HttpURLConnection connection = (HttpURLConnection) targetUrl.openConnection();
+        connection.setRequestMethod("GET");
+        connection.connect();
+        int responseCode = connection.getResponseCode();
+        if (HttpURLConnection.HTTP_OK == responseCode) {
+            Document document = Jsoup.connect(url).get();
+            Element faviconLink = document.select("link[rel~=(?i)^(shortcut )?icon]").first();
+            if (faviconLink != null) {
+                return faviconLink.attr("abs:href");
+            }
+        }
+        return null;
+    }
+
+
 }
