@@ -3,6 +3,7 @@ package com.shorlink.project.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.shorlink.project.dao.entity.ShortLinkDO;
 import com.shorlink.project.dto.rep.ShortLinkCreateReqDTO;
+import com.shorlink.project.dto.rep.ShortLinkUpdateReqDTO;
 import com.shorlink.project.dto.resp.ShortLinkCreateRespDTO;
 
 /**
@@ -20,6 +21,14 @@ public interface ShortLinkService extends IService<ShortLinkDO> {
     *
     */
     ShortLinkCreateRespDTO createShortLink(ShortLinkCreateReqDTO requestParam);
-    
-    
+
+    /** 
+    *@Description: 修改短链接
+    *@Param: [requestParam]
+    *@Author: yun
+    *@Date: 2023/12/24
+    *@return: void
+    *
+    */
+    void updateShortLink(ShortLinkUpdateReqDTO requestParam);
 }
