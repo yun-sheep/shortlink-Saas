@@ -1,10 +1,10 @@
-package com.yun.shortlinksaas;
+package com.shorlink.project;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class ShortlinkSaasApplicationTests {
+class ProjectApplicationTests {
 
     @Test
     void contextLoads() {

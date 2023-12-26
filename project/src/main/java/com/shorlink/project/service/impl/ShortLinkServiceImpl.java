@@ -34,9 +34,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.concurrent.TimeUnit;
 
-import static com.shorlink.project.common.constant.RedisKeyConstant.GOTO_SHORT_LINK_KEY;
-import static com.shorlink.project.common.constant.RedisKeyConstant.LOCK_GOTO_SHORT_LINK_KEY;
+import static com.shorlink.project.common.constant.RedisKeyConstant.*;
 
 /**
  * @Description 短链接接口服务层
@@ -171,7 +171,25 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
         //怎么通过短链接来找原始链接
         String fullShortUrl = serverName + "/" + shortUri;
         String originalLink = stringRedisTemplate.opsForValue().get(String.format(GOTO_SHORT_LINK_KEY, fullShortUrl));
-        //获取分布式锁锁
+        //缓存抗并发
+        if (StrUtil.isNotBlank(originalLink)){
+            ((HttpServletResponse) response).sendRedirect(originalLink);
+            return;
+        }
+        //布隆过滤器判空（缓存穿透逻辑1）
+        boolean contains = shortUriCreateCachePenetrationBloomFilter.contains(fullShortUrl);
+        if(!contains){
+            //不存在直接返回404
+            ((HttpServletResponse) response).sendRedirect("/page/notfound");
+            return;
+        }
+        //判断key是否为空值（缓存穿透逻辑2）
+        String gotoIsNullShortLink = stringRedisTemplate.opsForValue().get(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, fullShortUrl));
+        if(StrUtil.isNotBlank(gotoIsNullShortLink)){
+            ((HttpServletResponse) response).sendRedirect("/page/notfound");
+            return;
+        }
+        //获取分布式锁(重建缓存->又是缓存穿透逻辑3又是防止缓存击穿）
         RLock lock = redissonClient.getLock(String.format(LOCK_GOTO_SHORT_LINK_KEY, fullShortUrl));
         lock.lock();
         try {
@@ -185,18 +203,24 @@ public class ShortLinkServiceImpl extends ServiceImpl<ShortLinkMapper, ShortLink
                 LambdaQueryWrapper<ShortLinkGotoDO> linkGotoDOLambdaQueryWrapper = Wrappers.lambdaQuery(ShortLinkGotoDO.class)
                         .eq(ShortLinkGotoDO::getFullShortUrl,fullShortUrl);
                 ShortLinkGotoDO shortLinkGotoDO = shortLinkGotoMapper.selectOne(linkGotoDOLambdaQueryWrapper);
-                //直接重定向走
-                if(shortLinkGotoDO!=null){
-                    ((HttpServletResponse)response).sendRedirect(shortLinkGotoDO.getFullShortUrl());
+                if (shortLinkGotoDO == null) {
+                    stringRedisTemplate.opsForValue().set(String.format(GOTO_IS_NULL_SHORT_LINK_KEY, fullShortUrl), "-", 30, TimeUnit.MINUTES);
+                    ((HttpServletResponse) response).sendRedirect("/page/notfound");
+                    return;
                 }
+                //回表link查找原始链接
+                LambdaQueryWrapper<ShortLinkDO> queryWrapper = Wrappers.lambdaQuery(ShortLinkDO.class)
+                        .eq(ShortLinkDO::getGid, shortLinkGotoDO.getGid())
+                        .eq(ShortLinkDO::getFullShortUrl, fullShortUrl)
+                        .eq(ShortLinkDO::getDelFlag, 0)
+                        .eq(ShortLinkDO::getEnableStatus, 0);
+                ShortLinkDO shortLinkDO = baseMapper.selectOne(queryWrapper);
+                ((HttpServletResponse) response).sendRedirect(shortLinkDO.getOriginUrl());
+
             }
         }finally {
             lock.unlock();
         }
-
-
-
-
     }
 
     private String generateSuffix(ShortLinkCreateReqDTO requestParam){

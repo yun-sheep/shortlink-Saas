@@ -1,13 +1,13 @@
-package com.yun.shortlinksaas;
+package com.shorlink.project;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 @SpringBootApplication
-public class ShortlinkSaasApplication {
+public class ProjectApplication {
 
     public static void main(String[] args) {
-        SpringApplication.run(ShortlinkSaasApplication.class, args);
+        SpringApplication.run(ProjectApplication.class, args);
     }
 
 }
